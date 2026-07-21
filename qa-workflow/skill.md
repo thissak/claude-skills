@@ -28,6 +28,7 @@ args:
 - 절차를 넘어가게 만드는 것 자체는 목적이 아닙니다.
 - 출력 목표를 향한 임의 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용 또는 같은 DB 입력 그룹의 `O_ID/O_VAL`이 반복 종료 조건을 명시한 경우에만 조건부 반복합니다. 같은 `(step_no, step_sub_no)`에 여러 DCS 입력 행이 있으면 그 행들만 절차가 허용한 후보이며, 그룹 밖 입력은 시도하지 않습니다. 현재 하네스가 다중 후보를 처리하지 못하면 제품 실패가 아니라 `HARNESS_DCS_GROUP_INPUT_GAP`으로 남깁니다.
 - DCS/FourWay 입력 반복은 각 ACT 뒤 Unreal 자식 STATE와 Host `EX_IN`이 release 상태로 돌아온 다음에만 다음 pulse를 보냅니다. `EX_OUT`의 중간 변화만 보고 0.15초 복귀 전에 재입력하지 않습니다. 출력의 완전 순환이나 정체가 보이면 시간 준비 조건과 DB 허용 후보 그룹을 분리해 조사합니다.
+- physical 실행 전 선택한 Host 실행 파일과 실제 활성 프로세스 경로가 같은지 확인합니다. 명시적 `QA_HOST_EXE`가 없으면 root/x64 후보 중 최신 artifact를 사용하고, 불일치하면 `HOST_ARTIFACT_MISMATCH`로 중단합니다. 보고서의 `rig_artifacts.host`에서 경로·SHA-256·`deployment_drift`를 확인한 뒤에만 제품·DB·Unreal·하네스 문제로 귀속합니다. 구형 artifact에서만 재현되면 `HOST_ARTIFACT_DRIFT`로 분리하며 Host 파일을 자동 복사·덮어쓰기하지 않습니다.
 - Python의 직접 UDP41/51/61 패킷 재구현을 실언리얼 검증으로 간주하지 않습니다.
 - 하네스 문제를 해결하기 위해 원본 Host·Unreal·DB를 변경하지 않습니다.
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
@@ -38,7 +39,7 @@ args:
 
 ## 실행 모드
 
-1. 메인 Unreal 프로젝트와 Harness 저장소의 **실언리얼 physical 자동검증 모드**만 정식 절차 검증에 사용합니다. 실행 명령, fresh 수명주기, 판정과 증거 위치는 [`../../docs/qa-harness-manual.md`](../../docs/qa-harness-manual.md)를 따릅니다.
+1. 메인 Unreal 프로젝트와 Harness 저장소의 **실언리얼 physical 자동검증 모드**만 정식 절차 검증에 사용합니다. 실행 명령, fresh 수명주기, Host artifact identity, 판정과 증거 위치는 [`../../docs/qa-harness-manual.md`](../../docs/qa-harness-manual.md)를 따릅니다.
 2. physical adapter가 없는 컨트롤은 직접 상태 쓰기나 후보 입력 탐색으로 우회하지 않고 `COVERAGE_GAP`으로 중단합니다.
 3. 격리 worktree, 백업 하네스, 기존 IOS/PIE 수동 흐름은 자동검증 실행 경로로 사용하지 않습니다.
 4. Task 완료 여부만으로 PASS 처리하지 않습니다. JSON이 `FINISHED_WITH_FINDINGS`이면 findings를 해결하거나 명시한 채 결과를 보고합니다.
@@ -243,7 +244,7 @@ curl -s "http://192.168.11.201:6001/api/qa-issues?task_id={TASK_ID}" \
 
 ## Phase 4: 테스트 진행
 
-`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`, `held_intervening_action`, `held_explicit_release_boundary`, `held_release_observed`와 press-to-release 간격을 함께 확인합니다. 자연 release가 Host 오류를 드러내더라도 release 생략이나 직접 상태 쓰기로 통과시키지 않습니다.
+`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`, `rig_artifacts.host`를 판정 근거로 사용합니다. Host 실제 경로와 SHA-256이 없거나 활성 경로가 불일치하면 정식 제품 판정으로 승격하지 않습니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`, `held_intervening_action`, `held_explicit_release_boundary`, `held_release_observed`와 press-to-release 간격을 함께 확인합니다. 자연 release가 Host 오류를 드러내더라도 release 생략이나 직접 상태 쓰기로 통과시키지 않습니다.
 
 사람 게이트 실행은 `execution_mode=HUMAN_GATE`, 지정 입력의 `HUMAN_GATE_PASS`, `human_observation.target_observed/release_observed`, `err_count`, 그리고 지정 EquipmentId에 ACT가 없음을 함께 확인합니다. primary hold 중 하네스가 수행한 중간 DB 입력은 `HELD_INTERVENING_PASS`와 `actions[]` 증거가 있어야 합니다.
 
@@ -344,6 +345,7 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md`](../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md): 전체 107 Task P1 탐색과 원인 경계 1차 재분류
 - [`../../docs/qa-all-procedural-sweep-plan-20260721.md`](../../docs/qa-all-procedural-sweep-plan-20260721.md): 전체 107 Task 하네스 보강·대표 분석·P2 회귀 체크리스트
 - [`../../docs/qa-harness-validation-dcs-p2-20260721-230903.md`](../../docs/qa-harness-validation-dcs-p2-20260721-230903.md): 실제 Unreal DCS 펄스 재무장 검증, DB 입력 그룹·시간 준비도 재분류 기록
+- [`../../docs/qa-harness-validation-host-artifact-20260721-233920.md`](../../docs/qa-harness-validation-host-artifact-20260721-233920.md): Host artifact drift와 Task 394024 최신 x64 clean A/B 확정 기록
 - [`../../docs/qa-harness-ssot.md`](../../docs/qa-harness-ssot.md): 언리얼 모사 하네스의 목적, 경계, 금지사항, 판정 기준
 - [`../../docs/qa-harness-manual.md`](../../docs/qa-harness-manual.md): 메인 통합 환경의 fresh 실행, 결과 판독, 종료와 문제 해결 매뉴얼
 - [`../../docs/qa-harness-validation-394020-20260720.md`](../../docs/qa-harness-validation-394020-20260720.md): 기준 구현의 확인사항, 미해결 이슈, 미확인 범위 기록
