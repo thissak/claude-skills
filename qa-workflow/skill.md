@@ -38,6 +38,7 @@ args:
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
 - IOS 283 확인 행은 안정 실행 identity `(substep_id, equipment_id)`의 짧은 진행 grace를 먼저 관찰합니다. Host가 자동 진행하면 UDP31을 보내지 않고 `IOS_CONFIRM_AUTO_ADVANCED`를 기록하며, 같은 실행이 남아 있을 때만 확인을 보냅니다.
 - 현재 physical 상태가 DB 목표와 이미 같아 edge가 없으면 반대 상태로 합성 re-arm하지 않습니다. `NO_PHYSICAL_EDGE`로 중단하고 전체 sweep은 `PROCEDURE_MISMATCH`로 분류합니다.
+- StickAxis의 중립은 spring-return 결과이지 독립 방향 조작이 아닙니다. 같은 all-required DB 그룹에서 조작 축과 이미 중립인 형제 축을 함께 요구하면 형제 축을 임의로 이탈·복귀시켜 edge를 합성하지 않습니다. 지정 축 held STATE와 Host PASS가 확인됐어도 형제 축 edge가 없어 그룹이 미완료이면 `PROCEDURE_STICK_AXIS_NEUTRAL_EDGE_GAP`으로 재분류해 절차/Host 소유자 게이트로 보냅니다.
 - DB `I_ID`가 DT에 없으면 곧바로 Unreal 미구현으로 확정하지 않습니다. DB 변수 SIGNAL, Host `EX_IN[].DATA`, 같은 의미의 활성 ID, Unreal 태그·송신 경로를 교차검증합니다. 구형/dummy ID이면 `DB_I_ID_LEGACY_ORPHAN`으로 분류하고 활성 ID 별칭으로 우회하지 않습니다.
 - 생성된 `equipment_mapping.h`의 enum이 DB `iv_data_type` 또는 Host 실제 구조체 필드 타입과 다르면 `UNREAL_EQUIPMENT_MAPPING_ENUM_DRIFT`로 분류합니다. Host enum 값·DT 상태 순서·UDP 수신 대입·EX_IN 링크를 대조하고, 생성 헤더를 직접 고치지 말고 `generate_equipment_mapping.py`의 `SPECIAL_MAPPINGS`에서 수정한 뒤 SSOT 파이프라인으로 재생성합니다. 매핑 수정 뒤 초기 상태와 첫 목표가 같으면 별도 `PROCEDURE_INITIAL_STATE_EDGE_GAP`으로 유지합니다.
 - 첫 blocker 뒤를 수집하려고 Host 수동 Skip이나 later `start_step`을 일반 continuation으로 사용하지 않습니다. 수동 Skip은 stale/unmapped ID의 UDP100 EquipmentSet 동기화를 완료하지 못할 수 있고, `start_step`은 목표 Step 직접 점프가 아니라 선행 상태를 순차 재생하다 actual input에서 멈출 수 있습니다. 반복 blocker는 owner dossier로 묶고 소유자 수정 뒤 fresh full-run으로 다음 구간을 엽니다.
