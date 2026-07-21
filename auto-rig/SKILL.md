@@ -32,6 +32,7 @@ description: 사용자가 "자동리그 <절차번호|회차>"라고 말하면 �
 
 - **종료 코드로 판단 금지**: `FINISHED_WITH_FINDINGS`도 exit 0. 반드시 결과 JSON(`qa/runs/physical_<TaskId>_<ts>.json`)의 `outcome`·`terminal_verdict`·`findings[]`를 읽는다.
 - `FINISHED`=클린 / `FINISHED_WITH_FINDINGS`=완주했으나 findings 조사 필요 / `BLOCKED`(exit 2)=terminal_verdict에서 원인(`COVERAGE_GAP`·`NO_PHYSICAL_EDGE`·`PROCEDURE_MISMATCH` 등) 확인.
+- `KNOWN_INSPECTION_FAIL_COVERAGE_BOUNDARY`는 현재 실행의 실제 `COVERAGE_GAP`과 같은 MainStep에 기존 DB Inspection FAIL이 함께 있다는 뜻이다. `action.verdict`와 `db_inspection_context[].advisory_only`를 분리해 읽으며, 동일 결함 재현이나 자동 skip으로 해석하지 않는다.
 - 증거는 JSON 옆 `_artifacts/`(autodrv_cp/ap.log, qa_monitor.log)와 함께 읽는다.
 - 사용자 보고: outcome, 스텝 진행 범위, findings 요약, 보고서 경로.
 
@@ -39,4 +40,5 @@ description: 사용자가 "자동리그 <절차번호|회차>"라고 말하면 �
 
 - 후보 입력 탐색·임의 반복 금지, 초기 상태 사전 조성 금지, SET/GET/SETID 직접 상태 경로 없음.
 - 하네스 한계를 Host/DB/운영 Unreal 수정으로 해결하지 않는다 — `COVERAGE_GAP` 등은 그대로 보고.
+- 기존 Inspection FAIL만으로 ACT를 생략하거나 Step을 넘기거나 API에 결과를 쓰지 않는다.
 - 실행 후 정리: `python qa_rig.py down` (sweep은 Task별 자체 재생성).

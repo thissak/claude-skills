@@ -40,6 +40,7 @@ args:
 - 현재 physical 상태가 DB 목표와 이미 같아 edge가 없으면 반대 상태로 합성 re-arm하지 않습니다. `NO_PHYSICAL_EDGE`로 중단하고 전체 sweep은 `PROCEDURE_MISMATCH`로 분류합니다.
 - StickAxis의 중립은 spring-return 결과이지 독립 방향 조작이 아닙니다. 같은 all-required DB 그룹에서 조작 축과 이미 중립인 형제 축을 함께 요구하면 형제 축을 임의로 이탈·복귀시켜 edge를 합성하지 않습니다. 지정 축 held STATE와 Host PASS가 확인됐어도 형제 축 edge가 없어 그룹이 미완료이면 `PROCEDURE_STICK_AXIS_NEUTRAL_EDGE_GAP`으로 재분류해 절차/Host 소유자 게이트로 보냅니다.
 - DB `I_ID`가 DT에 없으면 곧바로 Unreal 미구현으로 확정하지 않습니다. DB 변수 SIGNAL, Host `EX_IN[].DATA`, 같은 의미의 활성 ID, Unreal 태그·송신 경로를 교차검증합니다. 구형/dummy ID이면 `DB_I_ID_LEGACY_ORPHAN`으로 분류하고 활성 ID 별칭으로 우회하지 않습니다.
+- DB Inspection PASS/FAIL/NA는 사람 QA 이력이며 실행 지시가 아닙니다. 기존 FAIL만으로 ACT를 생략하거나 Step을 넘기지 않습니다. 현재 실행에서 실제 `COVERAGE_GAP`이 발생하고 같은 `ms_step_id`에 FAIL이 있을 때만 `KNOWN_INSPECTION_FAIL_COVERAGE_BOUNDARY`로 구체화하고, `db_inspection_context[].advisory_only=true`와 원래 action 증거를 함께 보존합니다.
 - 생성된 `equipment_mapping.h`의 enum이 DB `iv_data_type` 또는 Host 실제 구조체 필드 타입과 다르면 `UNREAL_EQUIPMENT_MAPPING_ENUM_DRIFT`로 분류합니다. Host enum 값·DT 상태 순서·UDP 수신 대입·EX_IN 링크를 대조하고, 생성 헤더를 직접 고치지 말고 `generate_equipment_mapping.py`의 `SPECIAL_MAPPINGS`에서 수정한 뒤 SSOT 파이프라인으로 재생성합니다. 매핑 수정 뒤 초기 상태와 첫 목표가 같으면 별도 `PROCEDURE_INITIAL_STATE_EDGE_GAP`으로 유지합니다.
 - 첫 blocker 뒤를 수집하려고 Host 수동 Skip이나 later `start_step`을 일반 continuation으로 사용하지 않습니다. 수동 Skip은 stale/unmapped ID의 UDP100 EquipmentSet 동기화를 완료하지 못할 수 있고, `start_step`은 목표 Step 직접 점프가 아니라 선행 상태를 순차 재생하다 actual input에서 멈출 수 있습니다. 반복 blocker는 owner dossier로 묶고 소유자 수정 뒤 fresh full-run으로 다음 구간을 엽니다.
 - spring-return 또는 HOLD target은 `CAPS momentary_indices/return_index`와 target label로 구분하고 release 전 실제 `state_held`와 Host 진행을 관찰합니다. 설명의 `for N seconds`는 최소 유지시간이며, 관찰 예외가 나도 successful PRESS 뒤 RELEASE를 `finally`에서 시도합니다.
@@ -240,6 +241,8 @@ curl -s "http://192.168.11.201:6001/api/qa-issues?task_id={TASK_ID}" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+Inspection 상태는 pre-flight 맥락이다. 기존 FAIL이 있어도 현재 지원되는 physical control은 실행하며, FAIL API를 절차 skip이나 자동 판정 입력으로 호출하지 않는다. 현재 runtime의 실제 coverage gap과 같은 MainStep일 때만 새 경계 verdict로 결합한다.
+
 ### 사전 검증 후 분기
 
 - **오류 있음**: 원인 경계와 증거를 보고. DB 정의 결함이 독립적으로 확인된 경우에만 별도 수정 후 fresh 재검증
@@ -256,7 +259,7 @@ curl -s "http://192.168.11.201:6001/api/qa-issues?task_id={TASK_ID}" \
 
 ## Phase 4: 테스트 진행
 
-`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`, `rig_artifacts.host`를 판정 근거로 사용합니다. Host 실제 경로와 SHA-256이 없거나 활성 경로가 불일치하면 정식 제품 판정으로 승격하지 않습니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`, `held_intervening_action`, `held_explicit_release_boundary`, `held_release_observed`와 press-to-release 간격을 함께 확인합니다. EGI readiness를 사용한 결과는 첫 `host_observations`의 `iufc_readiness_gate`, `required_marker`, `observer.route/timetag/text`, `elapsed_seconds`를 확인합니다. 자연 release나 준비 상태 미관측이 Host 오류를 드러내더라도 release 생략, 고정 대기, 직접 상태 쓰기로 통과시키지 않습니다.
+`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`, `rig_artifacts.host`를 판정 근거로 사용합니다. Host 실제 경로와 SHA-256이 없거나 활성 경로가 불일치하면 정식 제품 판정으로 승격하지 않습니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`, `held_intervening_action`, `held_explicit_release_boundary`, `held_release_observed`와 press-to-release 간격을 함께 확인합니다. EGI readiness를 사용한 결과는 첫 `host_observations`의 `iufc_readiness_gate`, `required_marker`, `observer.route/timetag/text`, `elapsed_seconds`를 확인합니다. `KNOWN_INSPECTION_FAIL_COVERAGE_BOUNDARY`이면 원래 `action.verdict=COVERAGE_GAP`과 `db_inspection_context[].advisory_only=true`, 같은 `ms_step_id`의 inspection 메모를 분리해 확인합니다. 자연 release나 준비 상태 미관측이 Host 오류를 드러내더라도 release 생략, 고정 대기, 직접 상태 쓰기로 통과시키지 않습니다.
 
 사람 게이트 실행은 `execution_mode=HUMAN_GATE`, 지정 입력의 `HUMAN_GATE_PASS`, `human_observation.target_observed/release_observed`, `err_count`, 그리고 지정 EquipmentId에 ACT가 없음을 함께 확인합니다. primary hold 중 하네스가 수행한 중간 DB 입력은 `HELD_INTERVENING_PASS`와 `actions[]` 증거가 있어야 합니다.
 
@@ -270,7 +273,7 @@ Step 실패 보고 시 `/qa-signal`로 신호 디버깅:
 
 ## Phase 5: 결과 기록
 
-physical 자동검증의 workflow PASS 기록은 clean `FINISHED`와 필수 증거 보존이 확인된 경우에만 수행합니다. `FINISHED_WITH_FINDINGS`, `BLOCKED`, `COVERAGE_GAP`을 PASS 상태로 기록하지 않습니다.
+physical 자동검증의 workflow PASS 기록은 clean `FINISHED`와 필수 증거 보존이 확인된 경우에만 수행합니다. `FINISHED_WITH_FINDINGS`, `BLOCKED`, `COVERAGE_GAP`, `KNOWN_INSPECTION_FAIL_COVERAGE_BOUNDARY`를 PASS 상태로 기록하지 않습니다.
 
 ### 5-1. MainStep별 Inspection 결과
 
@@ -357,6 +360,8 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-validation-dcs-p3-20260722-020057.md`](../../docs/qa-harness-validation-dcs-p3-20260722-020057.md): 잔여 DCS 14 Task의 12건 해결·2건 AFT 페이지 선행조건 결함 재분류 기록
 - [`../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md`](../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md): FWD Wheel 스케일 수정과 ID 259·245 중단점 재분류 기록
 - [`../../../docs/adr/006-qa-reject-stale-control-id-aliases.md`](../../../docs/adr/006-qa-reject-stale-control-id-aliases.md): stale DB control ID를 하니스 별칭으로 우회하지 않는 결정
+- [`../../../docs/adr/007-qa-inspection-status-is-advisory.md`](../../../docs/adr/007-qa-inspection-status-is-advisory.md): DB Inspection 상태를 실행 지시가 아닌 읽기 전용 QA 맥락으로 결합하는 결정
+- [`../../docs/qa-harness-validation-inspection-boundary-20260722-082122.md`](../../docs/qa-harness-validation-inspection-boundary-20260722-082122.md): Task 321003 Step 11의 실제 runtime 경계와 기존 Inspection FAIL 결합 검증
 - [`../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md`](../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md): 전체 107 Task P1 탐색과 원인 경계 1차 재분류
 - [`../../docs/qa-all-procedural-sweep-plan-20260721.md`](../../docs/qa-all-procedural-sweep-plan-20260721.md): 전체 107 Task 하네스 보강·대표 분석·P2 회귀 체크리스트
 - [`../../docs/qa-harness-validation-dcs-p2-20260721-230903.md`](../../docs/qa-harness-validation-dcs-p2-20260721-230903.md): 실제 Unreal DCS 펄스 재무장 검증, DB 입력 그룹·시간 준비도 재분류 기록
