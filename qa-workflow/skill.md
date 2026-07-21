@@ -26,7 +26,8 @@ args:
 - 기하 기반 컨트롤은 카메라 화면 투영이 아니라 `CAPS target_world_path`와 `ACT HOLD_WORLD`로 실제 interaction ray를 구성합니다. 자동 카메라는 AutomationDriver 프로세스에서만 비영속 비활성화합니다.
 - 현재 커버 비검증 탐색은 Task 시작 시 `PRECOND COVERS_OPEN`을 적용하고 `procedural_evidence=false`로 분리합니다. 개별 `PREP` lazy-open은 사용하지 않습니다.
 - 절차를 넘어가게 만드는 것 자체는 목적이 아닙니다.
-- 출력 목표를 향한 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용에 반복이 명시된 경우에만 지정 조작을 조건부 반복합니다.
+- 출력 목표를 향한 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용 또는 같은 DB 입력 행의 `O_ID/O_VAL`이 반복 종료 조건을 명시한 경우에만 지정된 같은 조작을 조건부 반복합니다.
+- DCS/FourWay 입력 반복은 각 ACT 뒤 Unreal 자식 STATE와 Host `EX_IN`이 release 상태로 돌아온 다음에만 다음 pulse를 보냅니다. `EX_OUT`의 중간 변화만 보고 0.15초 복귀 전에 재입력하거나 다른 방향을 시도하지 않습니다.
 - Python의 직접 UDP41/51/61 패킷 재구현을 실언리얼 검증으로 간주하지 않습니다.
 - 하네스 문제를 해결하기 위해 원본 Host·Unreal·DB를 변경하지 않습니다.
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
