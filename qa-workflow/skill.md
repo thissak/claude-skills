@@ -32,6 +32,7 @@ args:
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
 - IOS 283 확인 행은 안정 실행 identity `(substep_id, equipment_id)`의 짧은 진행 grace를 먼저 관찰합니다. Host가 자동 진행하면 UDP31을 보내지 않고 `IOS_CONFIRM_AUTO_ADVANCED`를 기록하며, 같은 실행이 남아 있을 때만 확인을 보냅니다.
 - 현재 physical 상태가 DB 목표와 이미 같아 edge가 없으면 반대 상태로 합성 re-arm하지 않습니다. `NO_PHYSICAL_EDGE`로 중단하고 전체 sweep은 `PROCEDURE_MISMATCH`로 분류합니다.
+- spring-return 또는 HOLD target은 `CAPS momentary_indices/return_index`와 target label로 구분하고 release 전 실제 `state_held`와 Host 진행을 관찰합니다. 설명의 `for N seconds`는 최소 유지시간이며, 관찰 예외가 나도 successful PRESS 뒤 RELEASE를 `finally`에서 시도합니다.
 
 ## 실행 모드
 
@@ -239,7 +240,7 @@ curl -s "http://192.168.11.201:6001/api/qa-issues?task_id={TASK_ID}" \
 
 ## Phase 4: 테스트 진행
 
-`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다.
+`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`와 press-to-release 간격을 함께 확인합니다. 자연 release가 Host 오류를 드러내더라도 release 생략이나 직접 상태 쓰기로 통과시키지 않습니다.
 
 ### 실패 시 디버깅 연계
 
@@ -342,5 +343,6 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md`](../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md): 보강된 하네스의 6차 QA 10 Task 전체 회귀와 잔여 분류
 - [`../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md`](../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md): confirmation-aware 6차 QA 10 Task 최신 전체 회귀와 최종 분류
 - [`../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md`](../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md): 5차 QA 10 Task 최초 전체 탐색과 hold-conditioned 경계 분류
+- [`../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md`](../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md): hold-conditioned 수명주기 보강과 5차 QA 10 Task 최신 전체 회귀
 - [`../../docs/db-host-judgment-reference.md`](../../docs/db-host-judgment-reference.md): DB 컬럼 ↔ Host 판정 로직 레퍼런스
 - [`../qa-signal/skill.md`](../qa-signal/skill.md): 신호 검증 스킬
