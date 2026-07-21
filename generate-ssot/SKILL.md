@@ -32,7 +32,7 @@ powershell.exe -ExecutionPolicy Bypass -File "E:\KAI_VCBT\fa50visualdev_new\.cla
 2. **Pipeline 1-1**: `ue_create_datatable_gameplaytag.py` → DT_ControlData.csv + GameplayTags.ini
    - 트리거: 엑셀 mtime > 출력 mtime
 3. **Pipeline 1-2**: `generate_equipment_mapping.py` → equipment_mapping.h
-   - 트리거: 엑셀 mtime > 출력 mtime **OR** 스크립트 mtime > 출력 (MANUAL_ENTRIES 변경)
+   - 트리거: 엑셀 mtime > 출력 mtime **OR** 스크립트 mtime > 출력 (`SPECIAL_MAPPINGS`/`MANUAL_ENTRIES` 변경)
 4. **Pipeline 1-3**: `ANIMToSeq/scripts/generate_animid_marker_mapping.py` → DT_AnimIdMarkerMapping.csv
    - 트리거: `vcbt_folder_mapping.json` mtime > 출력 mtime
    - **DB animation 변경은 자동 검출 불가** → `-Force` 사용
@@ -64,7 +64,7 @@ powershell.exe -ExecutionPolicy Bypass -File "...generate-and-sync.ps1" -SkipRei
 |------|------|----------|------|
 | `DT_ControlData.csv` | 데이터 테이블 | 프로젝트 루트 | 엑셀 SSOT |
 | `FA50M_GameplayTags.ini` | GameplayTag 설정 | `Config/Tags/` | 엑셀 SSOT |
-| `equipment_mapping.h` | Host↔Unreal 매핑 | `Source/.../ReceiverUdp100/Types/` | 엑셀 + MANUAL_ENTRIES |
+| `equipment_mapping.h` | Host↔Unreal 매핑 | `Source/.../ReceiverUdp100/Types/` | 엑셀 + `SPECIAL_MAPPINGS` + `MANUAL_ENTRIES` |
 | `DT_AnimIdMarkerMapping.csv` | AnimId↔마커 매핑 | 프로젝트 루트 | `vcbt_folder_mapping.json` + DB |
 
 ## 실행 후 확인
@@ -95,6 +95,34 @@ self.MANUAL_ENTRIES = [
 ```
 
 **사용 시나리오**: Host가 EquipmentId=X를 전송하지만 `ProcessEquipmentValues()`에서 매핑을 찾지 못할 때
+
+## enum 순서 불일치 검수
+
+`equipment_mapping.h`의 enum 타입과 값 순서는 상태 이름 유사도만으로 확정하지 않습니다. 생성기 `_find_enum_type()`은 `StateValue` 이름 점수를 실제 Host 구조체 필드 타입보다 먼저 사용할 수 있으므로, 이름은 비슷하지만 정수 순서가 다른 enum을 선택할 수 있습니다.
+
+다음 증상이면 `UNREAL_EQUIPMENT_MAPPING_ENUM_DRIFT`로 조사합니다.
+
+- UDP100 초기화 뒤 Unreal 물리 위치가 DB 초기값의 실제 의미와 다름
+- AutomationDriver `CAPS target_index`가 Host enum 의미와 다름
+- 현재 상태와 목표가 같다는 `NO_PHYSICAL_EDGE`가 실제 패널 의미와 맞지 않음
+
+검수 순서는 다음과 같습니다.
+
+1. DB `tbl_input_variable.iv_data_type`과 공통·Task별 초기값을 확인합니다.
+2. Host `cockpit_to_host_type.h`의 실제 필드 선언과 `cockpit_type.h` enum 정수값을 확인합니다.
+3. Host UDP 수신 대입과 `tc_lnk_ext_input.cpp`의 `EX_IN` 링크를 확인합니다.
+4. `DT_ControlData.csv`의 `StateValue` 인덱스 순서와 생성된 Host→State index 표를 대조합니다.
+5. 타입 또는 순서가 다르면 생성된 `equipment_mapping.h`를 직접 편집하지 않고 `generate_equipment_mapping.py`의 `SPECIAL_MAPPINGS`에 EquipmentId·Component별 명시 매핑을 추가합니다.
+6. 정식 `generate-and-sync.ps1` 파이프라인으로 재생성하고 diff와 실제 UDP100/CAPS를 회귀합니다.
+
+2026-07-22 확인 사례:
+
+```text
+ID 259 SEL_IFF:     실제 ANTENNA_TYPE -> {0:0, 1:1, 2:2}
+ID 260 SEL_UHF_VHF: 실제 ANTENNA_TYPE -> {0:2, 1:1, 2:0}
+```
+
+매핑 수정 뒤에도 DB 초기 상태와 첫 요구 목표가 같으면 그것은 생성 결함이 아니라 별도의 절차 edge 문제입니다. 합성 re-arm으로 통과시키지 않습니다.
 
 ## EquipmentId 누락 검수 절차
 
