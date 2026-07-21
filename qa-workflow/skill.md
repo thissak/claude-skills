@@ -28,6 +28,8 @@ args:
 - 절차를 넘어가게 만드는 것 자체는 목적이 아닙니다.
 - 출력 목표를 향한 임의 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용 또는 같은 DB 입력 그룹의 `O_ID/O_VAL`이 반복 종료 조건을 명시한 경우에만 조건부 반복합니다. 같은 `(step_no, step_sub_no)`에 여러 DCS 입력 행이 있으면 그 행들만 절차가 허용한 후보이며, 그룹 밖 입력은 시도하지 않습니다. 현재 하네스가 다중 후보를 처리하지 못하면 제품 실패가 아니라 `HARNESS_DCS_GROUP_INPUT_GAP`으로 남깁니다.
 - DCS/FourWay 입력 반복은 각 ACT 뒤 Unreal 자식 STATE와 Host `EX_IN`이 release 상태로 돌아온 다음에만 다음 pulse를 보냅니다. `EX_OUT`의 중간 변화만 보고 0.15초 복귀 전에 재입력하지 않습니다. 출력의 완전 순환이나 정체가 보이면 시간 준비 조건과 DB 허용 후보 그룹을 분리해 조사합니다.
+- 물리 pulse와 Host `EX_IN` 복귀는 정상인데 DCS 출력이 고정되면 실제 FWD/AFT 페이지·mode 초기값·시간 준비 상태를 알려진 정상 Task와 비교합니다. `DECOUPLE`처럼 페이지가 독립인데 DB가 필요한 AFT LIST·숫자키 진입 행을 생략했다면 `PROCEDURE_AFT_IUFC_PAGE_PRECONDITION_GAP`으로 분류합니다.
+- 훈련내용 설명문을 추론해 DB에 없는 페이지 진입·모드 전환을 하네스가 합성하지 않습니다. 대표 Task의 같은 control/output Step PASS는 하네스 범주 해소 증거일 뿐, 실행하지 않은 개별 Task의 full PASS로 승격하지 않습니다.
 - Wheel/아날로그 입력은 이름으로 `0..255`를 추정하지 않고 실제 송수신 변환식의 정수 버킷 중앙을 목표로 합니다. FWD IUFC는 Host `normalized×250`, AFT/generic Wheel은 UDP51 `normalized×100` 계약을 사용하며 0과 최대 스토퍼는 정확한 끝값을 사용합니다.
 - 시간·화면 상태가 다음 입력의 전제이면 고정 sleep이나 Host 타이머 직접 설정으로 통과시키지 않습니다. 권위 있는 실제 출력 관측을 사용하고, EGI ALIGN `O_ID=133, O_VAL=5`는 UDP15 IUFC 텍스트의 `RDY`가 확인된 뒤에만 DCS ACT를 시작합니다. CP/AP 중 nonzero `TIMETAG`를 받은 route를 선택하며, 디코드 텍스트는 Host 신호 증거이지 렌더링 픽셀 증거가 아닙니다.
 - physical 실행 전 선택한 Host 실행 파일과 실제 활성 프로세스 경로가 같은지 확인합니다. 명시적 `QA_HOST_EXE`가 없으면 root/x64 후보 중 최신 artifact를 사용하고, 불일치하면 `HOST_ARTIFACT_MISMATCH`로 중단합니다. 보고서의 `rig_artifacts.host`에서 경로·SHA-256·`deployment_drift`를 확인한 뒤에만 제품·DB·Unreal·하네스 문제로 귀속합니다. 구형 artifact에서만 재현되면 `HOST_ARTIFACT_DRIFT`로 분리하며 Host 파일을 자동 복사·덮어쓰기하지 않습니다.
@@ -350,6 +352,7 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 
 ## 참고 문서
 
+- [`../../docs/qa-harness-validation-dcs-p3-20260722-020057.md`](../../docs/qa-harness-validation-dcs-p3-20260722-020057.md): 잔여 DCS 14 Task의 12건 해결·2건 AFT 페이지 선행조건 결함 재분류 기록
 - [`../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md`](../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md): FWD Wheel 스케일 수정과 ID 259·245 중단점 재분류 기록
 - [`../../../docs/adr/006-qa-reject-stale-control-id-aliases.md`](../../../docs/adr/006-qa-reject-stale-control-id-aliases.md): stale DB control ID를 하니스 별칭으로 우회하지 않는 결정
 - [`../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md`](../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md): 전체 107 Task P1 탐색과 원인 경계 1차 재분류
