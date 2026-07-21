@@ -33,6 +33,7 @@ args:
 - IOS 283 확인 행은 안정 실행 identity `(substep_id, equipment_id)`의 짧은 진행 grace를 먼저 관찰합니다. Host가 자동 진행하면 UDP31을 보내지 않고 `IOS_CONFIRM_AUTO_ADVANCED`를 기록하며, 같은 실행이 남아 있을 때만 확인을 보냅니다.
 - 현재 physical 상태가 DB 목표와 이미 같아 edge가 없으면 반대 상태로 합성 re-arm하지 않습니다. `NO_PHYSICAL_EDGE`로 중단하고 전체 sweep은 `PROCEDURE_MISMATCH`로 분류합니다.
 - spring-return 또는 HOLD target은 `CAPS momentary_indices/return_index`와 target label로 구분하고 release 전 실제 `state_held`와 Host 진행을 관찰합니다. 설명의 `for N seconds`는 최소 유지시간이며, 관찰 예외가 나도 successful PRESS 뒤 RELEASE를 `finally`에서 시도합니다.
+- 같은 held control의 명시적 return 행이 뒤에 있으면 중간의 다른 physical 입력도 primary hold 안에서 실제 조작하고 return 행까지 유지합니다. 명시적 return 행이 없을 때만 다음 physical 입력을 보수적 release 경계로 사용합니다.
 
 ## 실행 모드
 
@@ -42,6 +43,7 @@ args:
 4. Task 완료 여부만으로 PASS 처리하지 않습니다. JSON이 `FINISHED_WITH_FINDINGS`이면 findings를 해결하거나 명시한 채 결과를 보고합니다.
 5. 이전 실행에서 carry-in된 `err_count`를 다음 physical action의 새 finding으로 귀속하지 않습니다. 실제 조작 또는 실제 confirm 중 새로 증가한 오류만 해당 실행에 연결합니다.
 6. 회차 전체 탐색은 DB 목록을 읽기 전용 manifest로 고정하고 `run_physical_sweep.py --manifest <path> --state <new-path>`로 실행합니다. Task마다 fresh 리그를 만들고 실패 뒤에도 다음 Task를 계속하며 API workflow 상태는 쓰지 않습니다.
+7. 특정 입력만 사람이 수행해야 하면 매뉴얼의 `-HumanGate STEP:I_ID`를 사용합니다. CP는 에디터·전체화면 없이 `1600×900` 창 모드 `-game`, AP는 헤드리스로 실행합니다. 지정 입력에는 ACT를 보내지 않고 목표·release STATE와 Host 진행을 관찰하며 실행 뒤 리그를 대칭 종료합니다.
 
 ## 전제 조건
 
@@ -240,7 +242,9 @@ curl -s "http://192.168.11.201:6001/api/qa-issues?task_id={TASK_ID}" \
 
 ## Phase 4: 테스트 진행
 
-`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`와 press-to-release 간격을 함께 확인합니다. 자연 release가 Host 오류를 드러내더라도 release 생략이나 직접 상태 쓰기로 통과시키지 않습니다.
+`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다. held action은 `state_held`, `held_phase`, `held_placeholder`, `held_release_boundary`, `held_intervening_action`, `held_explicit_release_boundary`, `held_release_observed`와 press-to-release 간격을 함께 확인합니다. 자연 release가 Host 오류를 드러내더라도 release 생략이나 직접 상태 쓰기로 통과시키지 않습니다.
+
+사람 게이트 실행은 `execution_mode=HUMAN_GATE`, 지정 입력의 `HUMAN_GATE_PASS`, `human_observation.target_observed/release_observed`, `err_count`, 그리고 지정 EquipmentId에 ACT가 없음을 함께 확인합니다. primary hold 중 하네스가 수행한 중간 DB 입력은 `HELD_INTERVENING_PASS`와 `actions[]` 증거가 있어야 합니다.
 
 ### 실패 시 디버깅 연계
 
@@ -344,5 +348,6 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md`](../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md): confirmation-aware 6차 QA 10 Task 최신 전체 회귀와 최종 분류
 - [`../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md`](../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md): 5차 QA 10 Task 최초 전체 탐색과 hold-conditioned 경계 분류
 - [`../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md`](../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md): hold-conditioned 수명주기 보강과 5차 QA 10 Task 최신 전체 회귀
+- [`../../docs/qa-harness-validation-324000-human-gate-20260721-173708.md`](../../docs/qa-harness-validation-324000-human-gate-20260721-173708.md): 교차 Step hold 수정과 Task 324000 자동·사람 clean 검증
 - [`../../docs/db-host-judgment-reference.md`](../../docs/db-host-judgment-reference.md): DB 컬럼 ↔ Host 판정 로직 레퍼런스
 - [`../qa-signal/skill.md`](../qa-signal/skill.md): 신호 검증 스킬
