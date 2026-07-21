@@ -26,8 +26,8 @@ args:
 - 기하 기반 컨트롤은 카메라 화면 투영이 아니라 `CAPS target_world_path`와 `ACT HOLD_WORLD`로 실제 interaction ray를 구성합니다. 자동 카메라는 AutomationDriver 프로세스에서만 비영속 비활성화합니다.
 - 현재 커버 비검증 탐색은 Task 시작 시 `PRECOND COVERS_OPEN`을 적용하고 `procedural_evidence=false`로 분리합니다. 개별 `PREP` lazy-open은 사용하지 않습니다.
 - 절차를 넘어가게 만드는 것 자체는 목적이 아닙니다.
-- 출력 목표를 향한 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용 또는 같은 DB 입력 행의 `O_ID/O_VAL`이 반복 종료 조건을 명시한 경우에만 지정된 같은 조작을 조건부 반복합니다.
-- DCS/FourWay 입력 반복은 각 ACT 뒤 Unreal 자식 STATE와 Host `EX_IN`이 release 상태로 돌아온 다음에만 다음 pulse를 보냅니다. `EX_OUT`의 중간 변화만 보고 0.15초 복귀 전에 재입력하거나 다른 방향을 시도하지 않습니다.
+- 출력 목표를 향한 임의 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용 또는 같은 DB 입력 그룹의 `O_ID/O_VAL`이 반복 종료 조건을 명시한 경우에만 조건부 반복합니다. 같은 `(step_no, step_sub_no)`에 여러 DCS 입력 행이 있으면 그 행들만 절차가 허용한 후보이며, 그룹 밖 입력은 시도하지 않습니다. 현재 하네스가 다중 후보를 처리하지 못하면 제품 실패가 아니라 `HARNESS_DCS_GROUP_INPUT_GAP`으로 남깁니다.
+- DCS/FourWay 입력 반복은 각 ACT 뒤 Unreal 자식 STATE와 Host `EX_IN`이 release 상태로 돌아온 다음에만 다음 pulse를 보냅니다. `EX_OUT`의 중간 변화만 보고 0.15초 복귀 전에 재입력하지 않습니다. 출력의 완전 순환이나 정체가 보이면 시간 준비 조건과 DB 허용 후보 그룹을 분리해 조사합니다.
 - Python의 직접 UDP41/51/61 패킷 재구현을 실언리얼 검증으로 간주하지 않습니다.
 - 하네스 문제를 해결하기 위해 원본 Host·Unreal·DB를 변경하지 않습니다.
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
@@ -343,6 +343,7 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 
 - [`../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md`](../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md): 전체 107 Task P1 탐색과 원인 경계 1차 재분류
 - [`../../docs/qa-all-procedural-sweep-plan-20260721.md`](../../docs/qa-all-procedural-sweep-plan-20260721.md): 전체 107 Task 하네스 보강·대표 분석·P2 회귀 체크리스트
+- [`../../docs/qa-harness-validation-dcs-p2-20260721-230903.md`](../../docs/qa-harness-validation-dcs-p2-20260721-230903.md): 실제 Unreal DCS 펄스 재무장 검증, DB 입력 그룹·시간 준비도 재분류 기록
 - [`../../docs/qa-harness-ssot.md`](../../docs/qa-harness-ssot.md): 언리얼 모사 하네스의 목적, 경계, 금지사항, 판정 기준
 - [`../../docs/qa-harness-manual.md`](../../docs/qa-harness-manual.md): 메인 통합 환경의 fresh 실행, 결과 판독, 종료와 문제 해결 매뉴얼
 - [`../../docs/qa-harness-validation-394020-20260720.md`](../../docs/qa-harness-validation-394020-20260720.md): 기준 구현의 확인사항, 미해결 이슈, 미확인 범위 기록
