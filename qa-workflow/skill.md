@@ -347,7 +347,8 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md`](../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md): 보강된 하네스의 6차 QA 10 Task 전체 회귀와 잔여 분류
 - [`../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md`](../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md): confirmation-aware 6차 QA 10 Task 최신 전체 회귀와 최종 분류
 - [`../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md`](../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md): 5차 QA 10 Task 최초 전체 탐색과 hold-conditioned 경계 분류
-- [`../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md`](../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md): hold-conditioned 수명주기 보강과 5차 QA 10 Task 최신 전체 회귀
+- [`../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md`](../../docs/qa-harness-validation-5thqa-p2-20260721-164329.md): hold-conditioned 수명주기 보강 뒤 5차 QA 10 Task 2차 전체 회귀 역사 기록
 - [`../../docs/qa-harness-validation-324000-human-gate-20260721-173708.md`](../../docs/qa-harness-validation-324000-human-gate-20260721-173708.md): 교차 Step hold 수정과 Task 324000 자동·사람 clean 검증
+- [`../../docs/qa-harness-validation-5thqa-p3-20260721-181545.md`](../../docs/qa-harness-validation-5thqa-p3-20260721-181545.md): 교차 Step hold 보강 뒤 5차 QA 10 Task 최신 전체 회귀와 최종 분류
 - [`../../docs/db-host-judgment-reference.md`](../../docs/db-host-judgment-reference.md): DB 컬럼 ↔ Host 판정 로직 레퍼런스
 - [`../qa-signal/skill.md`](../qa-signal/skill.md): 신호 검증 스킬
