@@ -28,6 +28,7 @@ args:
 - 절차를 넘어가게 만드는 것 자체는 목적이 아닙니다.
 - 출력 목표를 향한 임의 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용 또는 같은 DB 입력 그룹의 `O_ID/O_VAL`이 반복 종료 조건을 명시한 경우에만 조건부 반복합니다. 같은 `(step_no, step_sub_no)`에 여러 DCS 입력 행이 있으면 그 행들만 절차가 허용한 후보이며, 그룹 밖 입력은 시도하지 않습니다. 현재 하네스가 다중 후보를 처리하지 못하면 제품 실패가 아니라 `HARNESS_DCS_GROUP_INPUT_GAP`으로 남깁니다.
 - DCS/FourWay 입력 반복은 각 ACT 뒤 Unreal 자식 STATE와 Host `EX_IN`이 release 상태로 돌아온 다음에만 다음 pulse를 보냅니다. `EX_OUT`의 중간 변화만 보고 0.15초 복귀 전에 재입력하지 않습니다. 출력의 완전 순환이나 정체가 보이면 시간 준비 조건과 DB 허용 후보 그룹을 분리해 조사합니다.
+- Wheel/아날로그 입력은 이름으로 `0..255`를 추정하지 않고 실제 송수신 변환식의 정수 버킷 중앙을 목표로 합니다. FWD IUFC는 Host `normalized×250`, AFT/generic Wheel은 UDP51 `normalized×100` 계약을 사용하며 0과 최대 스토퍼는 정확한 끝값을 사용합니다.
 - 시간·화면 상태가 다음 입력의 전제이면 고정 sleep이나 Host 타이머 직접 설정으로 통과시키지 않습니다. 권위 있는 실제 출력 관측을 사용하고, EGI ALIGN `O_ID=133, O_VAL=5`는 UDP15 IUFC 텍스트의 `RDY`가 확인된 뒤에만 DCS ACT를 시작합니다. CP/AP 중 nonzero `TIMETAG`를 받은 route를 선택하며, 디코드 텍스트는 Host 신호 증거이지 렌더링 픽셀 증거가 아닙니다.
 - physical 실행 전 선택한 Host 실행 파일과 실제 활성 프로세스 경로가 같은지 확인합니다. 명시적 `QA_HOST_EXE`가 없으면 root/x64 후보 중 최신 artifact를 사용하고, 불일치하면 `HOST_ARTIFACT_MISMATCH`로 중단합니다. 보고서의 `rig_artifacts.host`에서 경로·SHA-256·`deployment_drift`를 확인한 뒤에만 제품·DB·Unreal·하네스 문제로 귀속합니다. 구형 artifact에서만 재현되면 `HOST_ARTIFACT_DRIFT`로 분리하며 Host 파일을 자동 복사·덮어쓰기하지 않습니다.
 - Python의 직접 UDP41/51/61 패킷 재구현을 실언리얼 검증으로 간주하지 않습니다.
@@ -35,6 +36,7 @@ args:
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
 - IOS 283 확인 행은 안정 실행 identity `(substep_id, equipment_id)`의 짧은 진행 grace를 먼저 관찰합니다. Host가 자동 진행하면 UDP31을 보내지 않고 `IOS_CONFIRM_AUTO_ADVANCED`를 기록하며, 같은 실행이 남아 있을 때만 확인을 보냅니다.
 - 현재 physical 상태가 DB 목표와 이미 같아 edge가 없으면 반대 상태로 합성 re-arm하지 않습니다. `NO_PHYSICAL_EDGE`로 중단하고 전체 sweep은 `PROCEDURE_MISMATCH`로 분류합니다.
+- DB `I_ID`가 DT에 없으면 곧바로 Unreal 미구현으로 확정하지 않습니다. DB 변수 SIGNAL, Host `EX_IN[].DATA`, 같은 의미의 활성 ID, Unreal 태그·송신 경로를 교차검증합니다. 구형/dummy ID이면 `DB_I_ID_LEGACY_ORPHAN`으로 분류하고 활성 ID 별칭으로 우회하지 않습니다.
 - spring-return 또는 HOLD target은 `CAPS momentary_indices/return_index`와 target label로 구분하고 release 전 실제 `state_held`와 Host 진행을 관찰합니다. 설명의 `for N seconds`는 최소 유지시간이며, 관찰 예외가 나도 successful PRESS 뒤 RELEASE를 `finally`에서 시도합니다.
 - 같은 held control의 명시적 return 행이 뒤에 있으면 중간의 다른 physical 입력도 primary hold 안에서 실제 조작하고 return 행까지 유지합니다. 명시적 return 행이 없을 때만 다음 physical 입력을 보수적 release 경계로 사용합니다.
 
@@ -46,7 +48,7 @@ args:
 4. Task 완료 여부만으로 PASS 처리하지 않습니다. JSON이 `FINISHED_WITH_FINDINGS`이면 findings를 해결하거나 명시한 채 결과를 보고합니다.
 5. 이전 실행에서 carry-in된 `err_count`를 다음 physical action의 새 finding으로 귀속하지 않습니다. 실제 조작 또는 실제 confirm 중 새로 증가한 오류만 해당 실행에 연결합니다.
 6. 회차 전체 탐색은 DB 목록을 읽기 전용 manifest로 고정하고 `run_physical_sweep.py --manifest <path> --state <new-path>`로 실행합니다. Task마다 fresh 리그를 만들고 실패 뒤에도 다음 Task를 계속하며 API workflow 상태는 쓰지 않습니다.
-7. 특정 입력만 사람이 수행해야 하면 매뉴얼의 `-HumanGate STEP:I_ID`를 사용합니다. CP는 에디터·전체화면 없이 `1600×900` 창 모드 `-game`, AP는 헤드리스로 실행합니다. 지정 입력에는 ACT를 보내지 않고 목표·release STATE와 Host 진행을 관찰하며 실행 뒤 리그를 대칭 종료합니다.
+7. 특정 입력만 사람이 수행해야 하면 매뉴얼의 `-HumanGate STEP:I_ID`를 사용합니다. CP는 에디터·전체화면 없이 `800×450` 창 모드 `-game`, AP는 헤드리스로 실행합니다. 지정 입력에는 ACT를 보내지 않고 목표·release STATE와 Host 진행을 관찰하며 실행 뒤 리그를 대칭 종료합니다.
 
 ## 전제 조건
 
@@ -124,7 +126,7 @@ Task 선택 후 10개 항목을 자동 검증. **차단이 아닌 경고** 수�
 | # | 검증 | 심각도 | 비고 |
 |---|------|--------|------|
 | 1 | sub_no 전부 동일 | 경고 | `COUNT(DISTINCT sub_no) = 1` |
-| 2 | 미구현 장비 (DT_ControlData 미등록) | 정보 | i_id가 DT_ControlData에 없음 = 언리얼 미구현 (추후 추가 필요) |
+| 2 | DT_ControlData 미등록 ID | 정보 | 표면 coverage gap. SIGNAL·Host 링크·동일 의미 활성 ID 교차검증 뒤 미구현/DB 식별자 결함으로 귀속 |
 | 3 | i_term 범위 외 (6~9) | 오류 | 0~5, >10, >999 외 |
 | 4 | i_term = NULL | 경고 | 비교 모드 미설정 |
 | 5 | i_margin != 0 인데 i_term != 3 | 정보 | margin 무시됨 (i_term>10은 정상) |
@@ -136,7 +138,9 @@ Task 선택 후 10개 항목을 자동 검증. **차단이 아닌 경고** 수�
 
 **i_id 분류 기준**:
 - DT_ControlData.csv EquipmentId에 있음 → **언리얼 구현 완료** (항공기 내외부 + 지원장비)
-- DT_ControlData.csv에 없음 → **언리얼 미구현** (physical 자동검증은 `COVERAGE_GAP`)
+- DT_ControlData.csv에 없음 → physical 자동검증의 표면 판정은 `COVERAGE_GAP`. DB 변수명·`astd/fstd`, Host `EX_IN[].DATA`, 같은 의미의 활성 ID, Unreal 태그·송신 경로를 교차검증한다.
+- 구형 SIGNAL-disabled/dummy ID와 현재 활성 ID가 따로 있음 → **DB 식별자 결함** (`DB_I_ID_LEGACY_ORPHAN`/`DB_IDENTIFIER_MISMATCH`). 하니스 별칭 금지.
+- 활성 DB/Host ID인데 DT와 실제 Unreal 경로가 모두 없음 → **Unreal/control data 미구현** 후보.
 - 283 (CONFIRM_BUTTON) → **IOS 확인 버튼**
 
 ### 검증 SQL 모음
@@ -343,6 +347,8 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 
 ## 참고 문서
 
+- [`../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md`](../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md): FWD Wheel 스케일 수정과 ID 259·245 중단점 재분류 기록
+- [`../../../docs/adr/006-qa-reject-stale-control-id-aliases.md`](../../../docs/adr/006-qa-reject-stale-control-id-aliases.md): stale DB control ID를 하니스 별칭으로 우회하지 않는 결정
 - [`../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md`](../../docs/qa-harness-validation-all-procedural-p1-20260721-211000.md): 전체 107 Task P1 탐색과 원인 경계 1차 재분류
 - [`../../docs/qa-all-procedural-sweep-plan-20260721.md`](../../docs/qa-all-procedural-sweep-plan-20260721.md): 전체 107 Task 하네스 보강·대표 분석·P2 회귀 체크리스트
 - [`../../docs/qa-harness-validation-dcs-p2-20260721-230903.md`](../../docs/qa-harness-validation-dcs-p2-20260721-230903.md): 실제 Unreal DCS 펄스 재무장 검증, DB 입력 그룹·시간 준비도 재분류 기록

@@ -68,13 +68,15 @@ allowed-tools: Read, Grep, Glob, Bash, Task
 ```sql
 SELECT iv_id, iv_name, astd, fstd FROM tbl_input_variable WHERE iv_id = {I_ID};
 ```
-2. **`astd=0`이면 Host가 이 변수의 변화를 완전히 무시한다** (RECV/JUDGE 로그 없음, 절차 진행 불가)
-3. `astd=0`이 원인이면 다른 에이전트 분석 없이 즉시 해결 가능:
-```sql
-UPDATE tbl_input_variable SET astd = 1 WHERE iv_id = {I_ID};
--- Host 재시작 필수
-```
-4. 배경: Host는 `_ASTD` 빌드. DB의 `astd` 컬럼이 `PRE_EX_IN[].SIGNAL`로 로드됨. 상세: [db-host-judgment-reference.md §10](../docs/db-host-judgment-reference.md)
+2. **`astd=0`이면 현재 ID의 변화를 Host가 무시한다** (RECV/JUDGE 로그 없음, 절차 진행 불가). 그러나 이것만으로 SIGNAL 누락을 확정하거나 DB를 수정하지 않는다.
+3. 같은 의미의 활성 변수와 실제 연결을 먼저 찾는다.
+   - 유사한 `iv_name`과 `astd=1/fstd=1` ID
+   - Host `EX_IN[].DATA`가 실제 IO 변수인지 `TEMPF` 같은 dummy인지
+   - Unreal `DT_ControlData`, 태그·컴포넌트·UDP 송신 경로
+   - 다른 Task에서 같은 조작이 사용하는 현재 ID
+4. 구형 SIGNAL-disabled/dummy ID와 현재 활성 ID가 따로 있으면 `DB_I_ID_LEGACY_ORPHAN` 또는 `DB_IDENTIFIER_MISMATCH`로 분류한다. 하니스 별칭이나 단순 `astd=1` 변경은 금지하며 DB 소유자 정정과 fresh 회귀 대상으로 남긴다.
+5. 실제 활성 ID이고 Host 링크도 유효한데 `astd`만 누락된 것이 교차검증된 경우에만 `SIGNAL_FLAG_MISSING` 수정 후보로 보고한다. DB 변경은 이 진단 스킬의 읽기 전용 범위를 넘어가므로 별도 승인·변경 절차가 필요하다.
+6. 배경: Host는 `_ASTD` 빌드. DB의 `astd` 컬럼이 `PRE_EX_IN[].SIGNAL`로 로드됨. 상세: [db-host-judgment-reference.md §10](../../docs/db-host-judgment-reference.md)
 
 ### Phase 1: 정보 수집
 1. Task ID, Step 번호, 문제 증상 확인
@@ -156,10 +158,13 @@ UPDATE tbl_input_variable SET astd = 1 WHERE iv_id = {I_ID};
 
 ### 5. SIGNAL 플래그 누락 (astd=0)
 - **증상**: UDP 전송 정상, Host RECV/JUDGE 로그 0건, EX_IN 값 불변
-- **원인**: `tbl_input_variable.astd=0` → Host가 변수 변화를 완전히 무시
+- **직접 효과**: `tbl_input_variable.astd=0` → Host가 현재 ID의 변화를 무시
 - **빈발**: 새 지원장비 변수 추가 시 `fstd=1`만 넣고 `astd=1` 누락
-- **진단**: `SELECT astd FROM tbl_input_variable WHERE iv_id = {I_ID};`
-- **수정**: `UPDATE tbl_input_variable SET astd = 1 WHERE iv_id = {I_ID};` + Host 재시작
+- **진단**: `astd/fstd`뿐 아니라 Host EX_IN 실제 링크, 같은 의미의 활성 ID, Unreal 송신 경로까지 교차검증
+- **분기**: 활성 ID의 플래그만 누락됐으면 `SIGNAL_FLAG_MISSING`; 구형/dummy ID가 절차에 남았으면 `DB_I_ID_LEGACY_ORPHAN`
+- **금지**: 교차검증 전 `astd=1` 변경, 구형 ID→활성 ID 하니스 별칭
+
+Task 394009 Step 113의 ID 245는 `astd=0/fstd=0`, Host `TEMPF` dummy이며 현재 WPN REL은 ID 500으로 별도 구현돼 있다. 이 사례는 SIGNAL을 켤 문제가 아니라 절차의 stale ID 문제다.
 
 ---
 
@@ -314,6 +319,8 @@ grep -r -n "변수명" "E:\KAI_HOST\fa50m-host" --include="*.cpp" --include="*.h
 
 ## 참고 문서
 
+- [`../../../docs/adr/006-qa-reject-stale-control-id-aliases.md`](../../../docs/adr/006-qa-reject-stale-control-id-aliases.md): stale DB control ID를 하니스 별칭으로 우회하지 않는 결정
+- [`../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md`](../../docs/qa-harness-validation-394009-334006-followup-20260722-004256.md): ID 245/500 교차검증과 최종 분류
 - `docs/udp-descriptor-guide.md`: UDP Descriptor 가이드
 - `HOST_LOGGING_SSOT.md`: **Host 상시 로깅 SSOT** (로그 삽입 위치/포맷 정의)
 - `E:\KAI_HOST\iostestapp\docs\QA_Host_Debug_Log_Guide.md`: 호스트 디버그 로그 가이드 (수동 디버깅용)
