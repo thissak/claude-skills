@@ -40,6 +40,7 @@ args:
 3. 격리 worktree, 백업 하네스, 기존 IOS/PIE 수동 흐름은 자동검증 실행 경로로 사용하지 않습니다.
 4. Task 완료 여부만으로 PASS 처리하지 않습니다. JSON이 `FINISHED_WITH_FINDINGS`이면 findings를 해결하거나 명시한 채 결과를 보고합니다.
 5. 이전 실행에서 carry-in된 `err_count`를 다음 physical action의 새 finding으로 귀속하지 않습니다. 실제 조작 또는 실제 confirm 중 새로 증가한 오류만 해당 실행에 연결합니다.
+6. 회차 전체 탐색은 DB 목록을 읽기 전용 manifest로 고정하고 `run_physical_sweep.py --manifest <path> --state <new-path>`로 실행합니다. Task마다 fresh 리그를 만들고 실패 뒤에도 다음 Task를 계속하며 API workflow 상태는 쓰지 않습니다.
 
 ## 전제 조건
 
@@ -340,5 +341,6 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-validation-world-input-20260721-110535.md`](../../docs/qa-harness-validation-world-input-20260721-110535.md): 카메라 독립 월드 입력, Tasks 394024·370002 확인·미확인 기록
 - [`../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md`](../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md): 보강된 하네스의 6차 QA 10 Task 전체 회귀와 잔여 분류
 - [`../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md`](../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md): confirmation-aware 6차 QA 10 Task 최신 전체 회귀와 최종 분류
+- [`../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md`](../../docs/qa-harness-validation-5thqa-p1-20260721-153857.md): 5차 QA 10 Task 최초 전체 탐색과 hold-conditioned 경계 분류
 - [`../../docs/db-host-judgment-reference.md`](../../docs/db-host-judgment-reference.md): DB 컬럼 ↔ Host 판정 로직 레퍼런스
 - [`../qa-signal/skill.md`](../qa-signal/skill.md): 신호 검증 스킬
