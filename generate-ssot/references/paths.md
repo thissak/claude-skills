@@ -1,5 +1,13 @@
 # 경로 레퍼런스
 
+## 엑셀 SSOT (Teams → Downloads → 로컬)
+
+| 단계 | 경로 |
+|------|------|
+| Teams 원본 | Teams 공유 폴더 (브라우저에서 다운로드) |
+| Downloads | `$HOME\Downloads\250520_FA50M-계층구조_버튼식별_v3.0*.xlsx` |
+| 로컬 SSOT | `E:\UECsvDataTableConverter\250520_FA50M-계층구조_버튼식별_v3.0.xlsx` |
+
 ## SSOT 소스 (UECsvDataTableConverter)
 
 | 파일 | 경로 |
@@ -7,7 +15,6 @@
 | 엑셀 SSOT | `E:\UECsvDataTableConverter\250520_FA50M-계층구조_버튼식별_v3.0.xlsx` |
 | DataTable 스크립트 | `E:\UECsvDataTableConverter\ue_create_datatable_gameplaytag.py` |
 | Mapping 스크립트 | `E:\UECsvDataTableConverter\EquipmentMapping\generate_equipment_mapping.py` |
-| 자동화 배치 | `E:\UECsvDataTableConverter\auto.bat` |
 
 ## 생성 파일 (Generated)
 
@@ -31,16 +38,16 @@
 conda activate processtree
 ```
 
-## 수동 실행
+## 실행 방법 (PowerShell 사용)
 
-```bash
-# 전체 자동화
-E:\UECsvDataTableConverter\auto.bat
+```powershell
+# 전체 실행 (Downloads 엑셀 복사 + 생성 + 언리얼 복사 + diff)
+powershell.exe -ExecutionPolicy Bypass -File ".claude/skills/generate-ssot/scripts/generate-and-sync.ps1"
 
-# 개별 실행
-cd E:\UECsvDataTableConverter
-python ue_create_datatable_gameplaytag.py
+# 엑셀 복사 건너뛰기 (로컬 엑셀 그대로 사용)
+powershell.exe -ExecutionPolicy Bypass -File ".claude/skills/generate-ssot/scripts/generate-and-sync.ps1" -SkipExcel
 
-cd E:\UECsvDataTableConverter\EquipmentMapping
-python generate_equipment_mapping.py
+# 개별 실행 (PowerShell에서)
+cd E:\UECsvDataTableConverter; conda activate processtree; python ue_create_datatable_gameplaytag.py
+cd E:\UECsvDataTableConverter\EquipmentMapping; python generate_equipment_mapping.py
 ```

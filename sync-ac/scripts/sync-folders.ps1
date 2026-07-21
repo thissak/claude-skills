@@ -7,7 +7,7 @@ param(
 $CP = "E:\KAI_VCBT\fa50visualdev_new"
 $AC = "E:\KAI_VCBT\fa50visualdev_new_AC"
 $UE_Editor = "E:\Program Files\Epic Games\UE_5.4\Engine\Binaries\Win64\UnrealEditor.exe"
-$Folders = @("Binaries", "Source", "Plugins", "Content", "Intermediate")
+$Folders = @("Binaries", "Source", "Plugins", "Content", "Intermediate", "Config\Tags")
 
 if ($Direction -eq "cp2ac") {
     $Src = $CP

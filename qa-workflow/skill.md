@@ -23,11 +23,15 @@ args:
 자동검증을 실행하거나 하네스를 변경할 때는 먼저 [`../../docs/qa-harness-ssot.md`](../../docs/qa-harness-ssot.md)를 읽고 준수합니다.
 
 - 하네스는 **실제 언리얼을 AutomationDriver CLI로 조종하여 훈련생 조작을 모사**합니다. UDP 패킷은 Unreal 원본이 생성·송신합니다.
+- 기하 기반 컨트롤은 카메라 화면 투영이 아니라 `CAPS target_world_path`와 `ACT HOLD_WORLD`로 실제 interaction ray를 구성합니다. 자동 카메라는 AutomationDriver 프로세스에서만 비영속 비활성화합니다.
+- 현재 커버 비검증 탐색은 Task 시작 시 `PRECOND COVERS_OPEN`을 적용하고 `procedural_evidence=false`로 분리합니다. 개별 `PREP` lazy-open은 사용하지 않습니다.
 - 절차를 넘어가게 만드는 것 자체는 목적이 아닙니다.
 - 출력 목표를 향한 후보 입력 탐색·교체와 Host 내부 시험값 직접 주입을 Unreal 모사로 간주하지 않습니다. 훈련내용에 반복이 명시된 경우에만 지정 조작을 조건부 반복합니다.
 - Python의 직접 UDP41/51/61 패킷 재구현을 실언리얼 검증으로 간주하지 않습니다.
 - 하네스 문제를 해결하기 위해 원본 Host·Unreal·DB를 변경하지 않습니다.
 - Unreal 동등성을 입증할 수 없는 경로는 PASS가 아니라 `ERROR` 또는 `COVERAGE GAP`으로 기록합니다.
+- IOS 283 확인 행은 안정 실행 identity `(substep_id, equipment_id)`의 짧은 진행 grace를 먼저 관찰합니다. Host가 자동 진행하면 UDP31을 보내지 않고 `IOS_CONFIRM_AUTO_ADVANCED`를 기록하며, 같은 실행이 남아 있을 때만 확인을 보냅니다.
+- 현재 physical 상태가 DB 목표와 이미 같아 edge가 없으면 반대 상태로 합성 re-arm하지 않습니다. `NO_PHYSICAL_EDGE`로 중단하고 전체 sweep은 `PROCEDURE_MISMATCH`로 분류합니다.
 
 ## 실행 모드
 
@@ -35,6 +39,7 @@ args:
 2. physical adapter가 없는 컨트롤은 직접 상태 쓰기나 후보 입력 탐색으로 우회하지 않고 `COVERAGE_GAP`으로 중단합니다.
 3. 격리 worktree, 백업 하네스, 기존 IOS/PIE 수동 흐름은 자동검증 실행 경로로 사용하지 않습니다.
 4. Task 완료 여부만으로 PASS 처리하지 않습니다. JSON이 `FINISHED_WITH_FINDINGS`이면 findings를 해결하거나 명시한 채 결과를 보고합니다.
+5. 이전 실행에서 carry-in된 `err_count`를 다음 physical action의 새 finding으로 귀속하지 않습니다. 실제 조작 또는 실제 confirm 중 새로 증가한 오류만 해당 실행에 연결합니다.
 
 ## 전제 조건
 
@@ -227,13 +232,13 @@ curl -s "http://192.168.11.201:6001/api/qa-issues?task_id={TASK_ID}" \
 
 ## Phase 3: Fresh 실행 설정
 
-`app_config.ini`를 수동 편집하지 않습니다. 매뉴얼의 PowerShell runner가 control session lock을 획득하고 Host `WAIT` 확인 후 UDP21로 Task와 Step 1을 설정한 다음 `INIT → RUN` 순서로 시작합니다.
+`app_config.ini`를 수동 편집하지 않습니다. 매뉴얼의 PowerShell runner가 control session lock을 획득하고 Host `WAIT` 확인 후 UDP21로 Task와 Step 1을 설정한 다음 `INIT → RUN` 순서로 시작합니다. AutomationDriver readiness 뒤에는 자동 카메라 비영속 비활성화와 CP/AP 커버 선행조건 결과를 확인합니다.
 
 ---
 
 ## Phase 4: 테스트 진행
 
-`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/RELEASE` API로 수행합니다.
+`qa/runs/physical_<TaskId>_<timestamp>.json`의 `outcome`, `terminal_verdict`, `preconditions`, `results`, `findings`, `artifacts`를 판정 근거로 사용합니다. 프로세스 종료 코드 0이어도 `FINISHED_WITH_FINDINGS`일 수 있으므로 JSON을 생략하지 않습니다. 조작은 Harness가 실제 Unreal의 `ACT PRESS/HOLD/HOLD_WORLD/RELEASE` API로 수행합니다.
 
 ### 실패 시 디버깅 연계
 
@@ -332,5 +337,8 @@ curl -s -X POST "http://192.168.11.201:6001/api/qa-issues/{QA_ID}/link-step" \
 - [`../../docs/qa-harness-ssot.md`](../../docs/qa-harness-ssot.md): 언리얼 모사 하네스의 목적, 경계, 금지사항, 판정 기준
 - [`../../docs/qa-harness-manual.md`](../../docs/qa-harness-manual.md): 메인 통합 환경의 fresh 실행, 결과 판독, 종료와 문제 해결 매뉴얼
 - [`../../docs/qa-harness-validation-394020-20260720.md`](../../docs/qa-harness-validation-394020-20260720.md): 기준 구현의 확인사항, 미해결 이슈, 미확인 범위 기록
+- [`../../docs/qa-harness-validation-world-input-20260721-110535.md`](../../docs/qa-harness-validation-world-input-20260721-110535.md): 카메라 독립 월드 입력, Tasks 394024·370002 확인·미확인 기록
+- [`../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md`](../../docs/qa-harness-validation-6thqa-p9-20260721-113727.md): 보강된 하네스의 6차 QA 10 Task 전체 회귀와 잔여 분류
+- [`../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md`](../../docs/qa-harness-validation-6thqa-p11-20260721-133802.md): confirmation-aware 6차 QA 10 Task 최신 전체 회귀와 최종 분류
 - [`../../docs/db-host-judgment-reference.md`](../../docs/db-host-judgment-reference.md): DB 컬럼 ↔ Host 판정 로직 레퍼런스
 - [`../qa-signal/skill.md`](../qa-signal/skill.md): 신호 검증 스킬

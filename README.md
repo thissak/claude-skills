@@ -6,10 +6,19 @@ FA-50 시뮬레이터 프로젝트용 Claude Skills 모음입니다.
 
 | Skill | Description |
 |-------|-------------|
-| `/qa-log` | 언리얼 로그 파일 디버깅 |
-| `/qa-host` | Host 로그 파일 디버깅 |
-| `/sync-ac` | 빌드 + CP↔AC 프로젝트 동기화 |
+| `/add-udp41-equipment` | UDP41 지원장비 추가 |
+| `/anim-fresh` | 애니메이션 fresh 작업 |
 | `/create-skill` | 새 스킬 생성 가이드 |
+| `/generate-ssot` | 엑셀 SSOT 생성·동기화·검증 |
+| `/qa-host` | Host 로그 파일 디버깅 |
+| `/qa-log` | 언리얼 로그 파일 디버깅 |
+| `/qa-signal` | Unreal↔Host 신호 사슬 검증 |
+| `/qa-static` | QA 정적 사전검증 |
+| `/qa-workflow` | QA 워크플로우 오케스트레이터 |
+| `/screenshot` | 프로젝트 스크린샷 캡처 |
+| `/show-anim-mapping` | 애니메이션 매핑 조사 |
+| `/sync-ac` | 빌드 + CP↔AC 프로젝트 동기화 |
+| `/verify-anim-mapping` | 애니메이션 매핑 검증 |
 
 ## 설치 방법
 
@@ -28,22 +37,14 @@ cp -r claude-skills/* your-project/.claude/skills/
 ## 폴더 구조
 
 ```
-skills/
-├── qa-log/
-│   ├── SKILL.md
-│   └── references/
-├── qa-host/
-│   ├── SKILL.md
-│   └── references/
-├── sync-ac/
-│   ├── SKILL.md
-│   ├── scripts/
-│   └── references/
-└── create-skill/
-    ├── SKILL.md
-    ├── references/
-    └── assets/
+skills/<skill-name>/
+├── SKILL.md
+├── references/   # 선택
+├── scripts/      # 선택
+└── assets/       # 선택
 ```
+
+프로젝트의 `.agents/skills/<skill-name>/SKILL.md`는 이 저장소의 Claude 원본을 읽게 하는 Codex용 얇은 어댑터다. 원칙과 절차를 어댑터에 복제하지 않고 Claude `SKILL.md`를 SSOT로 유지한다.
 
 ## Skills 형식
 
