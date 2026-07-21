@@ -43,6 +43,7 @@ args:
 - 생성된 `equipment_mapping.h`의 enum이 DB `iv_data_type` 또는 Host 실제 구조체 필드 타입과 다르면 `UNREAL_EQUIPMENT_MAPPING_ENUM_DRIFT`로 분류합니다. Host enum 값·DT 상태 순서·UDP 수신 대입·EX_IN 링크를 대조하고, 생성 헤더를 직접 고치지 말고 `generate_equipment_mapping.py`의 `SPECIAL_MAPPINGS`에서 수정한 뒤 SSOT 파이프라인으로 재생성합니다. 매핑 수정 뒤 초기 상태와 첫 목표가 같으면 별도 `PROCEDURE_INITIAL_STATE_EDGE_GAP`으로 유지합니다.
 - 첫 blocker 뒤를 수집하려고 Host 수동 Skip이나 later `start_step`을 일반 continuation으로 사용하지 않습니다. 수동 Skip은 stale/unmapped ID의 UDP100 EquipmentSet 동기화를 완료하지 못할 수 있고, `start_step`은 목표 Step 직접 점프가 아니라 선행 상태를 순차 재생하다 actual input에서 멈출 수 있습니다. 반복 blocker는 owner dossier로 묶고 소유자 수정 뒤 fresh full-run으로 다음 구간을 엽니다.
 - spring-return 또는 HOLD target은 `CAPS momentary_indices/return_index`와 target label로 구분하고 release 전 실제 `state_held`와 Host 진행을 관찰합니다. 설명의 `for N seconds`는 최소 유지시간이며, 관찰 예외가 나도 successful PRESS 뒤 RELEASE를 `finally`에서 시도합니다.
+- `LinkedMomentaryPushButtonComponent`처럼 일반 momentary push의 상호작용을 상속한 subclass는 PRESS context를 유지한 채 중간 DB physical ACT를 수행하고 RELEASE합니다. 오래 누른다는 이유로 `ACT HOLD`를 합성해 제품의 hold-lock 의미로 바꾸지 않으며, 대표 runtime의 held ON·중간 ACT·release OFF를 확인한 뒤에만 같은 계열로 분류합니다.
 - 같은 held control의 명시적 return 행이 뒤에 있으면 중간의 다른 physical 입력도 primary hold 안에서 실제 조작하고 return 행까지 유지합니다. 명시적 return 행이 없을 때만 다음 physical 입력을 보수적 release 경계로 사용합니다.
 
 ## 실행 모드
