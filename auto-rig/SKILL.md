@@ -1,6 +1,6 @@
 ---
 name: auto-rig
-description: 사용자가 "자동리그 <절차번호|회차>"라고 말하면 자동검증(실언리얼 CLI 물리 검증)을 실행한다. 예 - "자동리그 394020", "자동리그 6차", "자동리그 5차". 휴먼리그(사람 관찰 세션)의 대칭 - 여기서는 하네스가 ACT로 훈련생 조작을 모사한다.
+description: 사용자가 "자동리그 <절차번호|회차>"라고 말하면 자동검증(실언리얼 CLI 물리 검증)을 실행한다. 예 - "자동리그 394020", "자동리그 6차", "자동리그 5차".
 ---
 
 # 자동 리그 (자동검증 물리 실행)
@@ -11,8 +11,7 @@ description: 사용자가 "자동리그 <절차번호|회차>"라고 말하면 �
 
 작업 디렉터리: `E:\KAI_HOST\iostestapp`
 
-- **휴먼리그 세션이 떠 있으면 먼저 종료** (단일 writer 락·AutomationDriver 포트 공유): `python -m qa.human_session status`가 응답하면 사용자에게 알리고 `end` 후 진행.
-- fresh 원칙: `python qa_rig.py down`으로 기존 세션 정리 (Task 단건 러너도 자체 확인하지만 명시 정리가 안전).
+- fresh 원칙: `python qa_rig.py down`으로 수동 휴먼리그를 포함한 기존 Host·AC·CP를 정리한다. Python IOS가 직접 실행 중이면 종료한 뒤 진행한다.
 
 ## 1. 인자 해석과 실행
 
