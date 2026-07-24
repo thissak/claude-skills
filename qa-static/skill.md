@@ -1,21 +1,21 @@
 ---
 name: qa-static
-description: DB i_id 정적 교차 검증 오케스트레이터. 훈련항목 파악, 검증 에이전트 병렬 실행, 수정 조율
-triggers:
-  - qa-static
-  - 정적 QA
-  - 정적 검증
-  - static qa
-  - 매핑 검증
-args:
-  - name: task_ids
-    description: "특정 Task ID (쉼표 구분, 생략 시 전체)"
-    required: false
+description: 사용자가 "qa-static", "정적 QA", "정적 검증", "static qa", "매핑 검증"이라고 말하면 DB i_id 정적 교차 검증, Task별 리포트, 승인된 수정 조율, 절차 검증 SSOT 등록을 수행한다. Task ID 목록을 지정하거나 전체를 검사할 수 있다.
 ---
 
 # 정적 QA 오케스트레이터
 
 훈련항목 전체를 파악하고, 검증 에이전트를 병렬 실행하여 매핑 누락을 탐지하고, 수정을 조율합니다.
+
+## 전체 절차 검증 SSOT 연결
+
+실행 전에 [`../../docs/qa-procedure-verification-ssot.md`](../../docs/qa-procedure-verification-ssot.md)를 읽는다. `.claude/qa-reports/history.md`는 정적 QA 실행 이력이고, Task의 현재 종합 판정은 `.claude/docs/qa-procedure-verification-current.md`가 소유한다.
+
+- Task별 정적 PASS/ERROR/WARN을 `record-supporting --method STATIC`으로 등록한다.
+- 실제 절차 진행을 차단하는 정적 결함만 `ISSUE --blocking`으로 기록한다.
+- 경고·검토 항목은 `OBSERVATION`으로 기록한다.
+- 정적 전체 PASS는 정적 차원의 `CLEAN`일 뿐 runtime Task 전체 clean을 단독으로 만들지 않는다.
+- 수정·재검증으로 기존 정적 IssueKey가 해소되면 `RESOLVED --resolves <IssueKey>`로 연결한다.
 
 ## 역할
 
@@ -179,6 +179,18 @@ DB 수정이 필요한 경우 오케스트레이터가 CLAUDE.md의 DB 수정 �
 | 리포트 | `.claude/qa-reports/{TIMESTAMP}/` |
 
 변경사항: {한줄 요약 - ex: "ex_in 필터 적용, DB 수정 3건"}
+```
+
+5. 에이전트가 Task별 결과를 현재 절차 SSOT에 등록한다. 사용자에게 명령 실행이나 표 작성을 요구하지 않는다.
+
+```powershell
+Set-Location E:\KAI_VCBT\fa50visualdev_new
+python Scripts\qa_procedure_status.py record-supporting `
+  --method STATIC --task <TaskId> `
+  --verdict <CLEAN|ISSUE|OBSERVATION|RESOLVED> `
+  --summary "<정적 검증 요약>" --scope <FULL|PARTIAL> `
+  [--blocking] [--owner "<책임 경계>"] [--evidence "<리포트 경로>"] `
+  [--resolves "<IssueKey>"]
 ```
 
 ## 참고

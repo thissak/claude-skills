@@ -1,21 +1,19 @@
 ---
 name: qa-log
-description: 언리얼 로그 파일을 실시간으로 읽어서 UDP 통신 및 상태 변경을 디버깅합니다
-triggers:
-  - qa-log
-  - 로그 확인
-  - 언리얼 로그
-  - unreal log
-args:
-  - name: lines
-    description: 읽을 줄 수
-    required: false
-    default: "100"
+description: 사용자가 "qa-log", "로그 확인", "언리얼 로그", "unreal log"라고 말하면 Unreal 로그의 UDP 통신과 상태 변경을 분석하고, Task 문맥이 있으면 절차 검증 SSOT에 진단 증거로 연결한다. 기본 최근 100줄 또는 사용자가 지정한 줄 수를 읽는다.
 ---
 
 # QA Log Debug
 
 언리얼 로그 파일을 실시간으로 읽어서 디버깅합니다.
+
+## 전체 절차 검증 SSOT 연결
+
+Task 문맥이 있는 로그 분석은 `.claude/docs/qa-procedure-verification-ssot.md`를 따른다. 로그는 원인 증거이므로 단독 Task clean 판정에 사용하지 않는다.
+
+- 실제 문제를 확인하면 에이전트가 `record-supporting --method LOG --verdict ISSUE`로 등록한다.
+- 정상 흐름이나 기존 IssueKey를 뒷받침하는 로그는 `OBSERVATION`으로 연결한다.
+- 사용자는 로그 경로나 관찰만 전달하며 SSOT 형식을 작성하지 않는다.
 
 ## 로그 파일 경로
 

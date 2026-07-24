@@ -1,13 +1,21 @@
 ---
 name: qa-signal
-description: 언리얼 ↔ 호스트 신호 검증 통합 QA. "신호 검증", "왜 판정 안돼?", "UDP 확인" 등의 요청에 사용
-user-invocable: true
-allowed-tools: Read, Grep, Glob, Bash, Task
+description: 사용자가 "qa-signal", "신호 검증", "왜 판정 안돼?", "UDP 확인"이라고 말하면 Task/Step의 Unreal↔Host↔DB 신호 흐름을 읽기 전용으로 진단하고 결과를 절차 검증 SSOT의 IssueKey 증거로 등록한다.
 ---
 
 # 언리얼 ↔ 호스트 신호 검증 QA
 
 3개의 전문 에이전트를 활용하여 언리얼-호스트 간 신호 흐름을 검증합니다.
+
+## 전체 절차 검증 SSOT 연결
+
+실행 전에 [`../../docs/qa-procedure-verification-ssot.md`](../../docs/qa-procedure-verification-ssot.md)와 현재 Task의 IssueKey를 읽는다.
+
+- 신호 검증은 원인 진단 증거이며 단독 Task clean 판정이 아니다.
+- 문제가 확인되면 `record-supporting --method SIGNAL --verdict ISSUE`로 새 IssueKey를 열거나 기존 IssueKey의 evidence에 연결한다.
+- 정상 신호 흐름은 `OBSERVATION`으로 기록한다. `SIGNAL CLEAN`은 금지한다.
+- 기존 원인이 해소됐음을 확인해도 Task 전체 clean으로 승격하지 않고 `RESOLVED --resolves <IssueKey>`로 기록한 뒤 전체 범위 자동 또는 휴먼 재검증을 남긴다.
+- 사용자는 관찰만 말하고, 구조화와 내부 등록기 실행은 에이전트가 수행한다.
 
 ## 에이전트 구성
 
@@ -97,6 +105,7 @@ SELECT iv_id, iv_name, astd, fstd FROM tbl_input_variable WHERE iv_id = {I_ID};
 1. 각 에이전트 분석 결과 수집
 2. 불일치 지점 식별
 3. 원인 분석 및 해결책 제시
+4. Task 문맥이 있으면 에이전트가 결과를 `Scripts/qa_procedure_status.py record-supporting --method SIGNAL`로 현재 절차 SSOT에 등록
 
 ## 출력 형식
 

@@ -1,22 +1,22 @@
 ---
 name: qa-workflow
-description: QA 워크플로우 오케스트레이터 - 웹 API로 Task 관리, 사전 검증, Host/IOS 실행, 결과 기록
-user-invocable: true
-allowed-tools: Read, Grep, Glob, Bash, Task, AskUserQuestion
-triggers:
-  - qa-workflow
-  - QA 워크플로우
-  - 다음 QA
-  - QA 시작
-args:
-  - name: task_id
-    description: Task ID (예: 333005). 미지정 시 대시보드에서 선택
-    required: false
+description: 사용자가 "qa-workflow", "QA 워크플로우", "다음 QA", "QA 시작"이라고 말하면 웹 API Task 조회, 사전 검증, physical 실행, 절차 검증 SSOT 등록을 조율한다. Task ID를 함께 지정할 수 있으며 외부 Inspection/workflow 쓰기는 명시적 게시 요청에서만 수행한다.
 ---
 
 # QA 워크플로우 오케스트레이터
 
 웹 API 조회 → Task 제안 → 사전 검증 → Host/IOS 실행 → 테스트 → 결과 기록까지의 전체 QA 프로세스를 오케스트레이션합니다.
+
+## 절차 검증 SSOT와 게시 경계
+
+실행 전에 [`../../docs/qa-procedure-verification-ssot.md`](../../docs/qa-procedure-verification-ssot.md)와 생성된 현재 표를 읽는다.
+
+- physical JSON은 `Scripts/qa_procedure_status.py record-auto`로 현재 절차 SSOT에 먼저 등록한다.
+- 정적·신호·로그 결과는 공통 IssueKey에 보조 증거로 연결한다.
+- 검증 실행과 외부 DB Inspection/workflow 게시를 분리한다.
+- 기본 검증 모드에서는 외부 API를 조회만 하며 Inspection, workflow status, QA issue를 쓰지 않는다.
+- 사용자가 명시적으로 “결과 게시”, “Inspection 반영”, “workflow 상태 변경”을 요청한 경우에만 Phase 5 게시를 수행한다.
+- 외부 게시 상태는 현재 runtime 검증 SSOT를 덮어쓰지 않는다.
 
 ## 자동검증 하네스 필수 원칙
 
@@ -271,9 +271,19 @@ Step 실패 보고 시 `/qa-signal`로 신호 디버깅:
 /qa-signal {TASK_ID} {FAIL_STEP_NO}
 ```
 
-## Phase 5: 결과 기록
+## Phase 5: 결과 등록과 명시적 외부 게시
 
-physical 자동검증의 workflow PASS 기록은 clean `FINISHED`와 필수 증거 보존이 확인된 경우에만 수행합니다. `FINISHED_WITH_FINDINGS`, `BLOCKED`, `COVERAGE_GAP`, `KNOWN_INSPECTION_FAIL_COVERAGE_BOUNDARY`를 PASS 상태로 기록하지 않습니다.
+physical 결과는 먼저 절차 검증 SSOT에 등록한다. 이 등록은 검증 흐름의 필수 단계이며 외부 API 쓰기가 아니다.
+
+```powershell
+Set-Location E:\KAI_VCBT\fa50visualdev_new
+python Scripts\qa_procedure_status.py record-auto `
+  --report E:\KAI_HOST\iostestapp\qa\runs\physical_<TaskId>_<timestamp>.json
+```
+
+아래 Inspection/workflow/QA issue API는 **명시적 외부 게시 모드**에서만 사용한다. 사용자가 게시를 요청하지 않았다면 결과 요약과 현재 IssueKey까지만 보고하고 Phase 5-1~5-3을 실행하지 않는다.
+
+게시 요청이 있을 때도 physical workflow PASS 기록은 clean `FINISHED`와 필수 증거 보존이 확인된 경우에만 수행합니다. `FINISHED_WITH_FINDINGS`, `BLOCKED`, `COVERAGE_GAP`, `KNOWN_INSPECTION_FAIL_COVERAGE_BOUNDARY`를 PASS 상태로 기록하지 않습니다.
 
 ### 5-1. MainStep별 Inspection 결과
 

@@ -7,6 +7,14 @@ description: Task ID별 애니메이션 매핑을 출력하고 DB, CSV, 시퀀�
 
 Task ID를 받아 해당 훈련절차의 애니메이션 매핑을 출력하고, DB animation 개수 vs 시퀀서 마커 개수를 검증합니다.
 
+## 전체 절차 검증 SSOT 연결
+
+실행 전에 `.claude/docs/qa-procedure-verification-ssot.md`를 읽는다. 검증 결과는 에이전트가 `record-supporting --method ANIMATION`으로 해당 Task에 등록한다.
+
+- 매핑 일치는 애니메이션 차원의 `CLEAN`이며 runtime 절차 전체 clean이 아니다.
+- 불일치는 `ISSUE`로 등록하고 리포트·마커 증거를 연결한다.
+- 사용자는 매핑을 확인할 뿐 SSOT 표나 명령을 작성하지 않는다.
+
 ## Trigger
 
 사용자가 "애니메이션 매핑 보여줘", "에니메이션 매핑 출력", "anim mapping" 등을 요청할 때.
@@ -129,6 +137,8 @@ re.stop()
 #### 요약
 - 전체 step 수
 - 애니메이션 있는 step 수 + ID 목록
+
+출력 후 에이전트는 PASS/FAIL, 범위, 증거 경로를 현재 절차 SSOT에 등록하고 생성 표를 확인한다.
 
 ### 6. db_input_tool 웹페이지 열기
 

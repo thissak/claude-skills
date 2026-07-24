@@ -1,22 +1,21 @@
 ---
 name: verify-anim-mapping
-description: 엑셀(훈련절차 샷정리)과 DB animation 데이터를 교차 검증하고, UE Remote Execution으로 시퀀서 마커를 실측하여 정합성을 확인합니다
-triggers:
-  - verify-anim-mapping
-  - 애니메이션 매핑 검증
-  - 시퀀스 매핑 검증
-  - anim mapping verify
-args:
-  - name: task_id
-    description: "검증할 특정 task_id (생략 시 전체 검증)"
-    required: false
-    default: "all"
+description: 사용자가 "verify-anim-mapping", "애니메이션 매핑 검증", "시퀀스 매핑 검증", "anim mapping verify"라고 말하면 특정 Task 또는 전체의 엑셀·DB animation·UE 시퀀서 마커 정합성을 검증하고 결과를 절차 검증 SSOT에 등록한다.
 ---
 
 # 애니메이션 매핑 검증
 
 DB(tbl_step.animation) ↔ 시퀀서 마커 (UE Remote Execution) 정합성을 검증합니다.
 선택적으로 엑셀(훈련절차 샷정리)과도 교차 검증합니다.
+
+## 전체 절차 검증 SSOT 연결
+
+실행 전에 `.claude/docs/qa-procedure-verification-ssot.md`를 읽는다. Task별 결과는 에이전트가 `record-supporting --method ANIMATION`으로 등록한다.
+
+- PASS는 애니메이션 차원의 `CLEAN`이며 runtime Task 전체 clean을 단독으로 만들지 않는다.
+- FAIL은 `ISSUE`로 등록하고 DB·시퀀서·엑셀 증거를 연결한다.
+- 해소 확인은 기존 IssueKey를 `RESOLVED`로 연결한다.
+- 사용자는 검증 결과만 확인하며 SSOT 형식을 작성하지 않는다.
 
 ## 핵심 검증
 
@@ -114,6 +113,8 @@ DB 애니메이션: {N}개 (AnimId: 301, 501, ...)
 시퀀서 마커: {M}개 (A, B, C, ...)
 결과: PASS / 마커 {X}개 부족
 ```
+
+결과 출력 뒤 에이전트는 범위와 증거를 현재 절차 SSOT에 등록하고 생성 표의 해당 Task를 확인한다.
 
 ## 참고
 
