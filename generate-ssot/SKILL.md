@@ -115,6 +115,30 @@ self.MANUAL_ENTRIES = [
 5. 타입 또는 순서가 다르면 생성된 `equipment_mapping.h`를 직접 편집하지 않고 `generate_equipment_mapping.py`의 `SPECIAL_MAPPINGS`에 EquipmentId·Component별 명시 매핑을 추가합니다.
 6. 정식 `generate-and-sync.ps1` 파이프라인으로 재생성하고 diff와 실제 UDP100/CAPS를 회귀합니다.
 
+### StateValue 순서 변경 금지 게이트
+
+`CAPS target_index`가 틀렸다는 이유만으로 Excel `StateValue`를 재배치하지 않습니다. `StateValue`는 Unreal 상태 인덱스이고 Host 숫자 의미는 방향별 명시 맵이 결정하므로, 다음 자료를 모두 확인하기 전에는 Excel 수정 프롬프트를 작성하지 않습니다.
+
+1. DB Step의 `I_VAL`, `IoDataType`, 현재 STD의 SIGNAL과 초기값
+2. Unreal→Host 송신 descriptor와 `udp51_send_map.h`의 `StateToHostMapping`
+3. Host UDP 필드→`EX_IN` 링크와 `Cur/Exp` 직접 판정 로그
+4. Host→Unreal `equipment_mapping.h`의 `HostToStateMapping`
+5. 명시 수신맵에 없는 raw 값이 `StateValue[raw]`로 떨어지는 fallback 여부
+
+송신과 Host 판정이 정상이고 수신맵에만 상태가 빠졌다면 Excel 순서를 바꾸지 않고 `SPECIAL_MAPPINGS.direct_mapping`에 누락된 Host→State index를 추가합니다.
+
+2026-07-25 기준 사례:
+
+```text
+ID 214 DN_LOCK_REL
+StateValue=("HOLD","ON","OFF")
+DB/UDP51/Host: OFF=0, ON=1, HOLD=2
+기존 수신맵: {0:2, 1:1}          # raw 2가 index fallback으로 OFF가 됨
+정정 수신맵: {0:2, 1:1, 2:0}     # raw 2→HOLD
+```
+
+이 사례에서 Excel을 `("OFF","ON","HOLD")`로 재배치하자는 초기 제안은 송신 이름맵을 확인하지 않은 오진이었다. 같은 증상에서는 위 대조 순서를 먼저 수행합니다.
+
 2026-07-22 확인 사례:
 
 ```text
