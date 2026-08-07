@@ -1,12 +1,10 @@
 param(
     [Parameter(Mandatory=$true)]
-    [string]$Direction,  # "cp2ac" or "ac2cp"
-    [switch]$LaunchEditor  # 에디터 실행 여부
+    [string]$Direction  # "cp2ac" or "ac2cp"
 )
 
 $CP = "E:\KAI_VCBT\fa50visualdev_new"
 $AC = "E:\KAI_VCBT\fa50visualdev_new_AC"
-$UE_Editor = "E:\Program Files\Epic Games\UE_5.4\Engine\Binaries\Win64\UnrealEditor.exe"
 $Folders = @("Binaries", "Source", "Plugins", "Content", "Intermediate", "Config\Tags")
 
 if ($Direction -eq "cp2ac") {
@@ -33,15 +31,3 @@ foreach ($f in $Folders) {
 }
 
 Write-Host "Done!" -ForegroundColor Cyan
-
-# 에디터 실행
-if ($LaunchEditor) {
-    Write-Host "=== Launching Editors ===" -ForegroundColor Cyan
-    Write-Host "  CP Editor..." -NoNewline
-    Start-Process -FilePath $UE_Editor -ArgumentList "`"$CP\FA50VisualDev.uproject`""
-    Write-Host " OK" -ForegroundColor Green
-
-    Write-Host "  AC Editor..." -NoNewline
-    Start-Process -FilePath $UE_Editor -ArgumentList "`"$AC\FA50VisualDev.uproject`""
-    Write-Host " OK" -ForegroundColor Green
-}

@@ -1,6 +1,6 @@
 ---
 name: sync-ac
-description: 빌드 후 CP(콕핏) ↔ AC(항공기) 프로젝트 동기화 및 에디터 실행
+description: 빌드 후 CP(콕핏) ↔ AC(항공기) 프로젝트 동기화
 triggers:
   - sync-ac
   - 동기화
@@ -15,7 +15,7 @@ args:
 
 # Build and Sync Projects
 
-빌드 후 CP(콕핏) ↔ AC(항공기) 동기화 + 에디터 실행
+빌드 후 CP(콕핏) ↔ AC(항공기) 동기화
 
 ## 프로젝트 경로
 
@@ -26,8 +26,8 @@ args:
 
 ## 사용법
 
-- `/sync-ac` 또는 `/sync-ac cp2ac`: 빌드 + CP → AC + 에디터 실행
-- `/sync-ac ac2cp`: AC → CP (빌드 없음, 에디터 실행 없음)
+- `/sync-ac` 또는 `/sync-ac cp2ac`: 빌드 + CP → AC
+- `/sync-ac ac2cp`: AC → CP (빌드 없음)
 
 ## 실행 단계
 
@@ -39,10 +39,10 @@ args:
 "E:/Program Files/Epic Games/UE_5.4/Engine/Build/BatchFiles/Build.bat" FA50VisualDevEditor Win64 Development -Project="E:/KAI_VCBT/fa50visualdev_new/FA50VisualDev.uproject" -WaitMutex
 ```
 
-**Step 2: 동기화 + 에디터 실행**
+**Step 2: 동기화**
 
 ```bash
-powershell.exe -ExecutionPolicy Bypass -File "E:/KAI_VCBT/fa50visualdev_new/.claude/skills/sync-ac/scripts/sync-folders.ps1" -Direction cp2ac -LaunchEditor
+powershell.exe -ExecutionPolicy Bypass -File "E:/KAI_VCBT/fa50visualdev_new/.claude/skills/sync-ac/scripts/sync-folders.ps1" -Direction cp2ac
 ```
 
 ### AC → CP
