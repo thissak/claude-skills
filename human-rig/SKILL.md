@@ -43,8 +43,8 @@ Get-CimInstance Win32_Process |
     } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
-$AcArgs = '"{0}" /Game/01_Visual/00_Level/VCBT/FA50_Maintenance_AP -game -windowed -ResX=800 -ResY=450 -nosplash -AutomationDriver -AutomationDriverPort=8791' -f $AcProject
-$CpArgs = '"{0}" /Game/01_Visual/00_Level/VCBT/FA50_Maintenance_CP -game -windowed -ResX=800 -ResY=450 -nosplash -AutomationDriver -AutomationDriverPort=8790 -AutomationAutoCamera' -f $CpProject
+$AcArgs = '"{0}" /Game/01_Visual/00_Level/VCBT/FA50_Maintenance_AP -game -windowed -ResX=800 -ResY=450 -nosplash -UDP13Port=2102 -AutomationDriver -AutomationDriverPort=8791' -f $AcProject
+$CpArgs = '"{0}" /Game/01_Visual/00_Level/VCBT/FA50_Maintenance_CP -game -windowed -ResX=800 -ResY=450 -nosplash -UDP13Port=2202 -AutomationDriver -AutomationDriverPort=8790 -AutomationAutoCamera' -f $CpProject
 
 Start-Process -FilePath 'pythonw.exe' -ArgumentList ('"{0}"' -f $IosMain) -WorkingDirectory $IosDir
 Start-Process -FilePath $HostExe -WorkingDirectory $HostDir
